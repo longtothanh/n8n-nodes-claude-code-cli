@@ -1,5 +1,6 @@
 {
-  "name": "Daily Standup Bot — MCP tool wrapper (Week 4)",
+  "id": "wfStandupMcpWk4",
+  "name": "Daily Standup Bot \u2014 MCP tool wrapper (Week 4)",
   "nodes": [
     {
       "parameters": {
@@ -10,7 +11,10 @@
       "name": "MCP Server Trigger",
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "typeVersion": 1,
-      "position": [-200, 0],
+      "position": [
+        -200,
+        0
+      ],
       "webhookId": "standup-mcp"
     },
     {
@@ -22,19 +26,34 @@
           "mode": "list",
           "value": "REPLACE_WITH_DIRECTION1_WORKFLOW_ID"
         },
-        "fields": { "values": [] }
+        "fields": {
+          "values": []
+        }
       },
       "id": "m2",
       "name": "run_standup_workflow",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2,
-      "position": [120, 0]
+      "position": [
+        120,
+        0
+      ]
     }
   ],
   "connections": {
     "run_standup_workflow": {
-      "ai_tool": [[{ "node": "MCP Server Trigger", "type": "ai_tool", "index": 0 }]]
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  }
 }

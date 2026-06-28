@@ -1,4 +1,5 @@
 {
+  "id": "wfStandupDir1Wk4",
   "name": "Daily Standup Bot — Direction 1 (Week 4, harnessed)",
   "nodes": [
     {
@@ -107,7 +108,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Validate Input — gate before Claude\nconst j = $json || {};\nconst errors = [];\nif (typeof j.activity !== 'string' || j.activity.trim().length === 0) errors.push('activity must be a non-empty string');\nconst c = j.counts || {};\nconst totalOk = typeof c.total === 'number' || (typeof c.github === 'number' && typeof c.redmine === 'number' && typeof c.slack === 'number');\nif (!totalOk) errors.push('counts.total (or github/redmine/slack) must be numeric');\nif ('items' in j && !Array.isArray(j.items)) errors.push('items must be an array when present');\nif ($env.STANDUP_FORCE_FAIL === 'input') errors.push('forced failure (STANDUP_FORCE_FAIL=input)');\nconst valid = errors.length === 0;\nconst total = typeof c.total === 'number' ? c.total : (c.github||0)+(c.redmine||0)+(c.slack||0);\nconsole.log(`[standup][input]  valid=${valid}  total=${total}  errors=${JSON.stringify(errors)}`);\nreturn [{ json: { ...j, valid, errors, _stage: 'input' } }];"
+        "jsCode": "// Validate Input — gate before Claude\nconst j = $json || {};\nconst errors = [];\nif (typeof j.activity !== 'string' || j.activity.trim().length === 0) errors.push('activity must be a non-empty string');\nconst c = j.counts || {};\nconst totalOk = typeof c.total === 'number' || (typeof c.github === 'number' && typeof c.redmine === 'number' && typeof c.slack === 'number');\nif (!totalOk) errors.push('counts.total (or github/redmine/slack) must be numeric');\nif ('items' in j && !Array.isArray(j.items)) errors.push('items must be an array when present');\nlet forceFail = $env.STANDUP_FORCE_FAIL;\ntry { const wb = $('Webhook (MCP entry)').first().json.body || $('Webhook (MCP entry)').first().json; if (wb && wb.force_fail) forceFail = wb.force_fail; } catch(e) {}\nif (forceFail === 'input') errors.push('forced failure (force_fail=input)');\nconst valid = errors.length === 0;\nconst total = typeof c.total === 'number' ? c.total : (c.github||0)+(c.redmine||0)+(c.slack||0);\nconsole.log(`[standup][input]  valid=${valid}  total=${total}  errors=${JSON.stringify(errors)}`);\nreturn [{ json: { ...j, valid, errors, _stage: 'input' } }];"
       },
       "id": "h1",
       "name": "Validate Input",
@@ -161,7 +162,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Validate Output — gate before Slack post\nconst j = $json || {};\nconst text = (j.output || '').toString();\nconst errors = [];\nif (j.success === false) errors.push('claude node reported success=false');\nif (text.trim().length === 0) errors.push('claude output is empty');\nfor (const s of ['Yesterday','Today','Blockers']) {\n  if (!new RegExp(`\\\\*${s}\\\\*`).test(text)) errors.push(`missing section: ${s}`);\n}\nif ($env.STANDUP_FORCE_FAIL === 'output') errors.push('forced failure (STANDUP_FORCE_FAIL=output)');\nconst valid = errors.length === 0;\nconsole.log(`[standup][output] valid=${valid} len=${text.length}  errors=${JSON.stringify(errors)}`);\nreturn [{ json: { ...j, valid, errors, _stage: 'output' } }];"
+        "jsCode": "// Validate Output — gate before Slack post\nconst j = $json || {};\nconst text = (j.output || '').toString();\nconst errors = [];\nif (j.success === false) errors.push('claude node reported success=false');\nif (text.trim().length === 0) errors.push('claude output is empty');\nfor (const s of ['Yesterday','Today','Blockers']) {\n  if (!new RegExp(`\\\\*${s}\\\\*`).test(text)) errors.push(`missing section: ${s}`);\n}\nlet forceFail = $env.STANDUP_FORCE_FAIL;\ntry { const wb = $('Webhook (MCP entry)').first().json.body || $('Webhook (MCP entry)').first().json; if (wb && wb.force_fail) forceFail = wb.force_fail; } catch(e) {}\nif (forceFail === 'output') errors.push('forced failure (force_fail=output)');\nconst valid = errors.length === 0;\nconsole.log(`[standup][output] valid=${valid} len=${text.length}  errors=${JSON.stringify(errors)}`);\nreturn [{ json: { ...j, valid, errors, _stage: 'output' } }];"
       },
       "id": "h3",
       "name": "Validate Output",
