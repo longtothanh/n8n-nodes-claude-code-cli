@@ -1,0 +1,15 @@
+# Drop this next to docker/production/n8n-with-claude-code/docker-compose.yml.
+# Loads the .env file for both containers and exposes process.env to n8n
+# Function/Code nodes so `{{$env.GITHUB_TOKEN}}` etc. work.
+services:
+  n8n:
+    env_file:
+      - .env
+    environment:
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-Asia/Ho_Chi_Minh}
+      - TZ=${TZ:-Asia/Ho_Chi_Minh}
+
+  claude-code:
+    env_file:
+      - .env
