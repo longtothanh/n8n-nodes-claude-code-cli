@@ -18,14 +18,10 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Environment
-.env
-.env.local
-
-# Test coverage
-coverage/
-
-# claude-config
-docker/production/claude-config
-.codegraph
-.codegraph.cache
+# Local n8n stack state (do NOT commit secrets / claude session)
+docker/production/n8n-with-claude-code/.env
+docker/production/n8n-with-claude-code/.env.bak
+docker/production/n8n-with-claude-code/claude-config/
+docker/production/n8n-with-claude-code/workspace/
+docker/production/n8n-with-claude-code/mcp-servers/
+docker/production/n8n-with-claude-code/docker-compose.override.yml
