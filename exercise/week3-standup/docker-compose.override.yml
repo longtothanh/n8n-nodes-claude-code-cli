@@ -10,6 +10,6 @@ services:
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-Asia/Ho_Chi_Minh}
       - TZ=${TZ:-Asia/Ho_Chi_Minh}
 
-  claude-code-runner:
+  claude-code:
     env_file:
       - .env
