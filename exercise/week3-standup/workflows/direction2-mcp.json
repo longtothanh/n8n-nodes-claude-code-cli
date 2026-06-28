@@ -1,0 +1,36 @@
+{
+  "name": "Daily Standup Bot — Direction 2 (MCP: Claude -> N8N)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "standup-mcp",
+        "options": {}
+      },
+      "id": "m1",
+      "name": "MCP Server Trigger",
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 1,
+      "position": [-200, 0],
+      "webhookId": "standup-mcp"
+    },
+    {
+      "parameters": {
+        "name": "run_standup_workflow",
+        "description": "Run the daily standup: fetch GitHub commits, Redmine issues, and Slack messages, generate a Yesterday/Today/Blockers standup with Claude, and post it to Slack. Use this when the user says things like 'run my standup' or 'post my standup for today'.",
+        "workflowId": "={{ 'Daily Standup Bot — Direction 1 (N8N -> Claude)' }}",
+        "fields": []
+      },
+      "id": "m2",
+      "name": "run_standup_workflow",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [120, 0]
+    }
+  ],
+  "connections": {
+    "run_standup_workflow": {
+      "ai_tool": [[{ "node": "MCP Server Trigger", "type": "ai_tool", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

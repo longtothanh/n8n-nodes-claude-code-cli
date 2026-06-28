@@ -1,0 +1,169 @@
+{
+  "name": "Daily Standup Bot — Direction 1 (N8N -> Claude)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 9 * * 1-5" }
+          ]
+        }
+      },
+      "id": "n1",
+      "name": "Schedule 9AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {},
+      "id": "n2",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-400, 180]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "standup-run",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "n3",
+      "name": "Webhook (MCP entry)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-400, 360],
+      "webhookId": "standup-run"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{$env.GITHUB_OWNER}}/{{$env.GITHUB_REPO}}/commits?since={{$now.minus({days:1}).toISO()}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{$env.GITHUB_TOKEN}}" },
+            { "name": "Accept", "value": "application/vnd.github+json" },
+            { "name": "User-Agent", "value": "n8n-standup-bot" }
+          ]
+        },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "n4",
+      "name": "GitHub Commits",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-160, 160]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.REDMINE_BASE_URL}}/issues.json?assigned_to_id=me&updated_on=%3E%3D{{$today.toFormat('yyyy-MM-dd')}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Redmine-API-Key", "value": "={{$env.REDMINE_API_KEY}}" },
+            { "name": "Authorization", "value": "=Basic {{$env.REDMINE_BASIC_B64}}" }
+          ]
+        },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "n5",
+      "name": "Redmine Issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [80, 160]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://slack.com/api/conversations.history?channel={{$env.SLACK_FETCH_CHANNEL_ID}}&oldest={{Math.floor(new Date(new Date().setHours(0,0,0,0)).getTime()/1000)}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{$env.SLACK_BOT_TOKEN}}" }
+          ]
+        }
+      },
+      "id": "n6",
+      "name": "Slack Messages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [320, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// See code-node-merge.js (committed in this folder).\n// (Inlined here so the JSON imports cleanly into n8n.)\nconst today = new Date().toISOString().slice(0,10);\nfunction g(items){return (items||[]).map(c=>({source:'github',id:c.sha,text:`[GitHub] ${c.commit?.message?.split('\\n')[0]||''} (${c.sha?.slice(0,7)})`,ts:c.commit?.author?.date||''}));}\nfunction r(p){return (p?.issues||[]).map(i=>({source:'redmine',id:`RM-${i.id}`,text:`[Redmine #${i.id}] ${i.subject} — status: ${i.status?.name||'?'}`,ts:i.updated_on||''}));}\nfunction s(p){return (p?.messages||[]).filter(m=>m.type==='message'&&m.text).map(m=>({source:'slack',id:m.ts,text:`[Slack] ${m.text.slice(0,240)}`,ts:m.ts}));}\nconst gh=g($items('GitHub Commits').map(i=>i.json).flat());\nconst rm=r($items('Redmine Issues')[0]?.json||{});\nconst sl=s($items('Slack Messages')[0]?.json||{});\nconst all=[...gh,...rm,...sl];const seen=new Set();const dd=all.filter(r=>{const k=`${r.source}:${r.id}`;if(seen.has(k))return false;seen.add(k);return true;});\nfunction grp(src){const l=dd.filter(r=>r.source===src).map(r=>`• ${r.text}`);return l.length?l.join('\\n'):'• (nothing)';}\nconst activity=[`Date: ${today}`,'','GitHub (last 24h):',grp('github'),'','Redmine (updated today):',grp('redmine'),'','Slack (today):',grp('slack')].join('\\n');\nif($env.STANDUP_FORCE_FAIL==='1')throw new Error('STANDUP_FORCE_FAIL=1');\nreturn [{json:{activity,counts:{github:gh.length,redmine:rm.length,slack:sl.length},session_id:$env.STANDUP_SESSION_ID,post_channel:$env.SLACK_POST_CHANNEL_ID}}];"
+      },
+      "id": "n7",
+      "name": "Merge & Dedup",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 160]
+    },
+    {
+      "parameters": {
+        "connectionMode": "docker",
+        "containerName": "claude-code-runner",
+        "containerIdentifier": "name",
+        "resumeSession": true,
+        "sessionId": "={{$env.STANDUP_SESSION_ID}}",
+        "systemPromptMode": "replace",
+        "systemPrompt": "You are a standup assistant. Use ONLY the activity provided. Never fabricate items. Remember prior standups in this session. Output EXACTLY three sections: Yesterday / Today / Blockers.",
+        "userPrompt": "=Activity for {{$today.toFormat('yyyy-MM-dd')}}:\n\n{{$json.activity}}\n\nWrite my daily standup in EXACTLY three sections (Yesterday / Today / Blockers). Use bullet points. If a section has no data, write `• (nothing)`.",
+        "outputFormat": "text"
+      },
+      "id": "n8",
+      "name": "Generate Standup",
+      "type": "n8n-nodes-claude-code-cli.claudeCode",
+      "typeVersion": 1,
+      "position": [800, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{$env.SLACK_BOT_TOKEN}}" },
+            { "name": "Content-Type", "value": "application/json; charset=utf-8" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{$env.SLACK_POST_CHANNEL_ID}}\",\n  \"text\": {{ JSON.stringify('📋 Daily Standup — ' + $today.toFormat('yyyy-MM-dd') + '\\n\\n' + $json.output) }}\n}"
+      },
+      "id": "n9",
+      "name": "Post Standup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, 160]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"channel\": \"{{$env.SLACK_POST_CHANNEL_ID}}\", \"message\": {{ JSON.stringify($('Generate Standup').item.json.output) }} }"
+      },
+      "id": "n10",
+      "name": "Respond Done",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1280, 160]
+    }
+  ],
+  "connections": {
+    "Schedule 9AM":     { "main": [[{ "node": "GitHub Commits", "type": "main", "index": 0 }]] },
+    "Manual Trigger":   { "main": [[{ "node": "GitHub Commits", "type": "main", "index": 0 }]] },
+    "Webhook (MCP entry)": { "main": [[{ "node": "GitHub Commits", "type": "main", "index": 0 }]] },
+    "GitHub Commits":   { "main": [[{ "node": "Redmine Issues", "type": "main", "index": 0 }]] },
+    "Redmine Issues":   { "main": [[{ "node": "Slack Messages", "type": "main", "index": 0 }]] },
+    "Slack Messages":   { "main": [[{ "node": "Merge & Dedup",  "type": "main", "index": 0 }]] },
+    "Merge & Dedup":    { "main": [[{ "node": "Generate Standup","type": "main", "index": 0 }]] },
+    "Generate Standup": { "main": [[{ "node": "Post Standup",   "type": "main", "index": 0 }]] },
+    "Post Standup":     { "main": [[{ "node": "Respond Done",   "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
