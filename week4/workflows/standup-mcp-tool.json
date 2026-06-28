@@ -1,0 +1,59 @@
+{
+  "id": "wfStandupMcpWk4",
+  "name": "Daily Standup Bot \u2014 MCP tool wrapper (Week 4)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "standup-mcp",
+        "options": {}
+      },
+      "id": "m1",
+      "name": "MCP Server Trigger",
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        0
+      ],
+      "webhookId": "standup-mcp"
+    },
+    {
+      "parameters": {
+        "name": "run_standup_workflow",
+        "description": "Run the daily standup: fetch GitHub commits, Redmine issues, and Slack messages; validate, generate a Yesterday/Today/Blockers standup with Claude, validate again, and post it to Slack. Validation gates block bad runs.",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "REPLACE_WITH_DIRECTION1_WORKFLOW_ID"
+        },
+        "fields": {
+          "values": []
+        }
+      },
+      "id": "m2",
+      "name": "run_standup_workflow",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        120,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "run_standup_workflow": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
